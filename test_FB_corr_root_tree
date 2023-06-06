@@ -1,0 +1,65 @@
+#include <iostream>
+#include "Pythia8/Pythia.h"
+#include "TFile.h"
+#include "TTree.h"
+
+
+int main() {
+  // Set up PYTHIA
+  Pythia8::Pythia pythia;
+  pythia.readString("Beams:eCM = 13000.");  // Center-of-mass energy
+  pythia.readString("HardQCD:all = on");   // Generate hard QCD processes
+  pythia.init();
+
+  // Define observables
+  double etaCut = 2.5;  // Pseudorapidity cut for forward-backward correlation
+  double ptMin = 1.0;   // Minimum transverse momentum
+
+  // Create a ROOT file and tree
+  TFile file("output.root", "RECREATE");
+  TTree tree("tree", "Forward-Backward Correlation Tree");
+
+  // Create variables to store event data
+  double correlation, pT, eta, phi;;
+  int pdgId, status;
+
+  // Set up the branches in the tree
+  tree->Branch("correlation", &correlation), "correlation/D";
+  tree->Branch("pdgId", &pdgId, "pdgId/I");
+  tree->Branch("status", &status, "status/I");
+  tree->Branch("pT", &pT, "pT/D");
+  tree->Branch("eta", &eta, "eta/D");
+  tree->Branch("phi", &phi, "phi/D");
+
+  // Event loop
+  for (int iEvent = 0; iEvent < 10000; ++iEvent) {
+    if (!pythia.next()) continue;  // Generate the event
+
+    // Loop over particles in the event
+    for (int i = 0; i < pythia.event.size(); ++i) {
+      // Select particles within the specified pseudorapidity and transverse momentum range
+      if (pythia.event[i].isFinal() && pythia.event[i].isVisible() &&
+          fabs(pythia.event[i].eta()) < etaCut && pythia.event[i].pT() > ptMin) {
+        // Fill the event data
+        correlation = pythia.event[i].pz() / pythia.event[i].e();
+        pdgId = pythia.event[i].id();
+        status = pythia.event[i].status();
+        pT = pythia.event[i].pT();
+        eta = pythia.event[i].eta();
+        phi = pythia.event[i].phi();
+
+        // Fill the tree with the event data
+        tree.Fill();
+      }
+    }
+  }
+
+  // Write the tree to the file
+  tree.Write();
+
+
+  // Clean up
+  file.Close();
+  pythia.stat();
+  return 0;
+}

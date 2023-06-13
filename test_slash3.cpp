@@ -6,7 +6,7 @@
 using namespace Pythia8;
 
 int main() {
-  // PYTHIA initialization
+
   Pythia pythia;
   pythia.readString("Beams:eCM = 900.");
   pythia.readString("SoftQCD:all = on");
@@ -66,6 +66,7 @@ int main() {
     // Calculate correlation function
     double b_corr = ((sumNBNF - sumNF * sumNB) / (sumNFSquared -(sumNF)*(sumNF)));
     double a = sumNF - b_corr * (sumNF);
+    double n_gap = log(nF) - log(nB);
     
     // Fill the histogram with correlation data
     hist.Fill(n_gap, b_corr);

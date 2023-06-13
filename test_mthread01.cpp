@@ -16,7 +16,7 @@ void *handle(void *ptr)
 
 
   Pythia8::Pythia pythia;
-  pythia.readString("Beams:eCM = 900.");
+  pythia.readString("Beams:eCM = 7000.");
   pythia.readString("SoftQCD:all = on");
   pythia.init();
 
@@ -35,7 +35,7 @@ void *handle(void *ptr)
   TH2D hist2("b_corr_vs_n_gap", "b_corr vs. n_gap;Pseudorapidity Gap (n_gap);b_corr",
              20, 0, 0.7, 20, 0, 1.2);
 
-  for (int iEvent = 0; iEvent < 1000; ++iEvent) {
+  for (int iEvent = 0; iEvent < 10000; ++iEvent) {
     if (!pythia.next()) continue;
 
     // Initialize counters for each event
@@ -46,10 +46,12 @@ void *handle(void *ptr)
     int particle_1 = 0;
     int particle_2 = 0;
 
-    for (int i = 0; i < pythia.event.size(); ++i) {
+    for (int i = 0; i < pythia.event.size(); ++i) 
+    {
       // Select particles within the specified pseudorapidity and transverse momentum range
       if (pythia.event[i].isFinal() && pythia.event[i].isVisible() &&
-          fabs(pythia.event[i].eta()) < etaCut && pythia.event[i].pT() > ptMin && pythia.event[i].pT() < ptMax) {
+          fabs(pythia.event[i].eta()) < etaCut && pythia.event[i].pT() > ptMin && pythia.event[i].pT() < ptMax) 
+          {
         // Count the number of forward and backward particles
         if (pythia.event[i].eta() > 0)
           nF++;
@@ -65,7 +67,7 @@ void *handle(void *ptr)
     nB_sum += nB;
 
     // Calculate pseudorapidity gap (n_gap)
-    double n_gap = log(nF) - log(nB);
+    double n_gap = log(nF) - log(nB); //Not sure if the relation is correct.
     std::cout << "n_gap = " << n_gap << std::endl;
 
     // Calculate correlation function parameter b_corr
@@ -76,7 +78,7 @@ void *handle(void *ptr)
   }
 
   // Calculate correlation function parameter a
-  double a = nF_sum / 1000.0 - b_corr * (nF_sum / 1000.0);
+  double a = nF_sum - b_corr * (nF_sum);
 
   // Print correlation function parameters
   std::cout << "a = " << a << std::endl;
@@ -87,14 +89,16 @@ void *handle(void *ptr)
             20, 0, 30);
 
   // Fill the histogram with data points
-  for (int i = 0; i < 1000; ++i) {
+  for (int i = 0; i < 10000; ++i)
+   {
     int nF = 0;
     int nB = 0;
-    for (int j = 0; j < 20; ++j) {
-      if (j < nF_sum / 1000)
+    for (int j = 0; j < 20; ++j) 
+    {
+      if (j < nF_sum)
         nF = j;
       else
-        nF = nF_sum / 1000;
+        nF = nF_sum;
       nB = a + b_corr * nF;
       hist.Fill(nF, nB);
     }

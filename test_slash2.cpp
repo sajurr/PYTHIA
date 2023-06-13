@@ -166,7 +166,7 @@ int main() {
     b_corr = ((nBnF_sum - nF_sum * nB_sum) / (nFSquared_sum -(nF_sum)*(nF_sum)));
 
     // Calculate the pseudorapidity gap
-    n_gap = std::abs(nF - nB);
+    n_gap = log(nF) - log(nB);
 
     // Fill the TTree
     tree.Fill();

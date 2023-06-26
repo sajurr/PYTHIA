@@ -1,120 +1,103 @@
 #include <iostream>
-#include <vector>
-#include <cmath>
 #include "Pythia8/Pythia.h"
 #include "TFile.h"
-#include "TTree.h"
-#include "TH1D.h"
-#include "TH2D.h"
+#include "TThread.h"
+#include "TH1F.h"
 #include "TCanvas.h"
-#include "TBrowser.h"
+#include "TGraph.h"
 
-int main() {
-  Pythia8::Pythia pythia;
-  pythia.readString("Beams:eCM = 900.");
-  pythia.readString("SoftQCD:all = on");
-  pythia.init();
+using namespace std;
 
-  double etaCut = 2.5;  // Pseudorapidity cut for forward-backward correlation
-  double ptMin = 0.3;   // Minimum transverse momentum
-  double ptMax = 1.5;   // Maximum transverse momentum
+int main()
+{
+    Pythia8::Pythia pythia;
+    pythia.readString("Beams:idA = 2212");
+    pythia.readString("Beams:idB = 2212");
+    pythia.readString("SoftQCD:all = on");
+    pythia.readString("Beams:eCM = 7000");
+    pythia.init();
 
-  // Create variables for correlation function calculation
-  double b_corr = 0.0;
-  double nF_sum = 0.0;
-  double nFSquared_sum = 0.0;
-  double nBnF_sum = 0.0;
-  double nB_sum = 0.0;
-
-  // Create a histogram for b_corr versus n_gap
-  TH2D hist2("b_corr_vs_n_gap", "b_corr vs. n_gap;Pseudorapidity Gap (n_gap);b_corr",
-             20, 0, 0.7, 20, 0, 1.2);
-
-  for (int iEvent = 0; iEvent < 1000; ++iEvent) {
-    if (!pythia.next()) continue;
-
-    // Initialize counters for each event
-    int nF = 0;
+    double pTMin = 0.3;
+    double pTMax = 1.5;
+    double sum_nBnF = 0.0;
+    double sum_nF = 0.0;
+    double sum_nB = 0.0;
+    double nFSquared_sum = 0.0;
+    int eventNumber = 1000;
     int nB = 0;
-    
-    // Indices of two particles used for n_gap calculation
-    int particle_1 = 0;
-    int particle_2 = 0;
+    int nF = 0;
+    vector<double> window_width = {0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8};
 
-    for (int i = 0; i < pythia.event.size(); ++i) {
-      // Select particles within the specified pseudorapidity and transverse momentum range
-      if (pythia.event[i].isFinal() && pythia.event[i].isVisible() &&
-          fabs(pythia.event[i].eta()) < etaCut && pythia.event[i].pT() > ptMin && pythia.event[i].pT() < ptMax) {
-        // Count the number of forward and backward particles
-        if (pythia.event[i].eta() > 0)
-          nF++;
-        else
-          nB++;
-      }
+    TGraph b_corr_vs_width;
+
+    // Event loop
+    for (int iEvents = 0; iEvents < eventNumber; ++iEvents)
+    {
+        if (!pythia.next())
+            continue;
+
+        vector<double> fwdMult(window_width.size(), 0.0); // Array to store forward multiplicity within desired pseudorapidity window.
+        vector<double> bkwdMult(window_width.size(), 0.0); // Array to store backward multiplicity within desired pseudorapidity window.
+        vector<double> b_corr_values(window_width.size(), 0.0); // Array to store b_corr values.
+
+        // Particle loop
+        for (int i = 0; i < pythia.event.size(); ++i)
+        {
+            // Conditional statement
+            if (!pythia.event[i].isCharged() || !pythia.event[i].isHadron() || !pythia.event[i].isFinal())
+                continue;
+            if (!(pythia.event[i].pT() > pTMin && pythia.event[i].pT() < pTMax))
+                continue;
+
+            // Choosing forward multiplicity within different pseudorapidity windows
+            for (int j = 0; j < window_width.size() - 1; ++j)
+            {
+                if (pythia.event[i].eta() > window_width[j] && pythia.event[i].eta() <= window_width[j + 2])
+                    ++fwdMult[j];
+                else if (pythia.event[i].eta() < -window_width[j] && pythia.event[i].eta() >= -window_width[j + 1])
+                    ++bkwdMult[j];
+            }
+        }
+
+        // Declare loop indices outside the loops
+        int f, b;
+
+        // Will also need to account for the particles that do not participate in any correlation or have zero b_corr.
+        for (f = 0; f < window_width.size(); ++f)
+        {
+            sum_nF += fwdMult[f] / eventNumber;
+        }
+
+        for (b = 0; b < window_width.size(); ++b)
+        {
+            sum_nB += bkwdMult[b] / eventNumber;
+            sum_nBnF += (fwdMult[f] * bkwdMult[b]) / eventNumber;
+            nFSquared_sum += (fwdMult[f] * fwdMult[f]) / eventNumber;
+        }
+
+        // Calculate and store b_corr values for each window width
+        for (int k = 0; k < window_width.size() - 1; ++k)
+        {
+            double b_corr = ((sum_nBnF - sum_nF * sum_nB) / (nFSquared_sum - sum_nF * sum_nF)); //Redefined for new forward and backward multiplicities
+            double a = sum_nB - b_corr * sum_nF;
+
+            if (std::isnan(b_corr) || std::isinf(b_corr))
+                continue;
+
+            b_corr_values[k] = b_corr;
+        }
+
+        // Fill the TGraph
+        for (int k = 0; k < window_width.size() - 2; ++k)
+        {
+            b_corr_vs_width.SetPoint(k, window_width[k + 1], b_corr_values[k]);
+        }
     }
 
-    // Accumulate values for correlation function calculation
-    nF_sum += nF;
-    nFSquared_sum += nF * nF;
-    nBnF_sum += nB * nF;
-    nB_sum += nB;
+    // Create a ROOT file and save the TGraph
+    TFile outFile("output.root", "RECREATE");
+    b_corr_vs_width.Write();
+    outFile.Close();
 
-    // Calculate pseudorapidity gap (n_gap)
-    double n_gap = log(nF) - log(nB);
-    std::cout << "n_gap = " << n_gap << std::endl;
-
-    // Calculate correlation function parameter b_corr
-    b_corr = ((nBnF_sum - nF_sum * nB_sum) / (nFSquared_sum - (nF_sum) * (nF_sum)));
-
-    // Fill b_corr vs n_gap histogram
-    hist2.Fill(n_gap, b_corr);
-  }
-
-  // Calculate correlation function parameter a
-  double a = nF_sum / 1000.0 - b_corr * (nF_sum / 1000.0);
-
-  // Print correlation function parameters
-  std::cout << "a = " << a << std::endl;
-  std::cout << "b_corr = " << b_corr << std::endl;
-
-  // Create a histogram for the correlation function
-  TH1D hist("correlation_hist", "Forward-Backward Correlation;Number of Forward Particles (n_F);Number of Backward Particles (<n_B>)",
-            20, 0, 30);
-
-  // Fill the histogram with data points
-  for (int i = 0; i < 1000; ++i) {
-    int nF = 0;
-    int nB = 0;
-    for (int j = 0; j < 20; ++j) {
-      if (j < nF_sum / 1000)
-        nF = j;
-      else
-        nF = nF_sum / 1000;
-      nB = a + b_corr * nF;
-      hist.Fill(nF, nB);
-    }
-  }
-
-  // Create a TCanvas for plotting correlation function
-  TCanvas canvas1("canvas1", "Forward-Backward Correlation Histogram", 800, 600);
-  canvas1.cd();
-  hist.Draw("COLZ");
-
-  // Create a TCanvas for plotting b_corr vs n_gap
-  TCanvas canvas2("canvas2", "b_corr vs. n_gap", 800, 600);
-  canvas2.cd();
-  hist2.Draw();
-
-  // Write the histograms to a ROOT file
-  TFile file("output.root", "RECREATE");
-  hist.Write();
-  hist2.Write();
-  file.Close();
-
-  // Open the TBrowser to view the histograms
-  TBrowser browser;
-
-  // Clean up
-  pythia.stat();
-  return 0;
+    return 0;
 }

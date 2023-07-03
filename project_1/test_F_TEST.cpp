@@ -123,11 +123,11 @@ int main()
             sum_nB_k = 0.0;
             sum_nBnF_k = 0.0;
 
-                for (int b = k + 1; b < window_width.size() - 1; ++b) 
-                {
-                    sum_nB_k += bkwdMult[b];
-                    sum_nBnF_k += fwdMult[k] * bkwdMult[b];
-                }
+                // for (int b = k + 1; b < window_width.size() - 1; ++b) 
+                // {
+                    sum_nB_k += bkwdMult[k];
+                    sum_nBnF_k += fwdMult[k] * bkwdMult[k];
+                // }
 
             double b_corr = (sum_nBnF_k - sum_nF_k * sum_nB_k) / (nFSquared_sum_k - sum_nF_k * sum_nF_k);
 

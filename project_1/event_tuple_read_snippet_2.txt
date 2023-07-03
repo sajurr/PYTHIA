@@ -1,0 +1,153 @@
+void test_data_anls_03()
+{
+        // Set up variables for histogramming
+        const double pTMin = 0.3;
+        const double pTMax = 1.5;
+        // Create histograms and profiles
+        TH1F *hist = new TH1F("hist", "pt", 100, pTMin, pTMax);
+        TH1F *hist2 = new TH1F("hist2", "eta", 100, -3, 3);
+    // Open the ROOT file
+    TFile *file = TFile::Open("pythia8MB_CR1_RHoff_1.root");
+    //TTree *tree = (TTree*)file -> Get("pT_and_eta_tree;6");
+    
+    // Check if the file opened successfully
+    if (!file || file->IsZombie())
+    {
+        std::cout << "Error opening the file." << std::endl;
+        return;    }
+
+    // Loop over the events
+    char eventnumber[30];
+    for (Int_t j = 0; j <= 999999; ++j)
+    {
+        sprintf(eventnumber, "Event%d", j);
+
+        // Get the tuple for the current event
+        TNtuple *tuple = (TNtuple *)file->Get(eventnumber);
+        if (!tuple)
+        {
+            std::cout << "Error accessing tuple " << eventnumber << std::endl;
+            continue;        }
+
+        // Print the tuple contents
+        //tuple->Print();
+
+        // std::vector<double> window_width;
+        // window_width.push_back(0.0);
+        // window_width.push_back(0.1);
+        // window_width.push_back(0.2);
+        // window_width.push_back(0.3);
+        // window_width.push_back(0.4);
+        // window_width.push_back(0.5);
+        // window_width.push_back(0.6);
+        // window_width.push_back(0.7);
+        // window_width.push_back(0.8);
+
+        // const size_t num_windows = window_width.size();
+        // std::vector<double> fwdMult(num_windows - 1, 0.0);
+        // std::vector<double> bkwdMult(num_windows - 1, 0.0);
+        
+        // TTree *tree = (TTree*)file->Get("tree"); // Tree to store pt and eta values from events in Ntuple.
+
+        // Access eta and pT data using SetBranchAddress
+            Float_t eta;
+            Float_t pt;
+            
+            tuple->SetBranchAddress("pt", &pt);
+            tuple->SetBranchAddress("eta", &eta);
+        // Get the number of entries (events) in the tuple
+        Int_t nentries = tuple->GetEntries();
+        for (Int_t i=0; i < nentries; i++) 
+        {
+            tuple->GetEntry(i);
+            hist->Fill(pt);
+            hist2->Fill(eta);        }             
+
+        // TH2F *b_corr_vs_width = new TH2F("b_corr_vs_width", "b_corr vs Window Width", num_windows - 1, &window_width[0], 100, 0, 1.2);
+        // TProfile *profile_b_corr = new TProfile("profile_b_corr", "b_corr vs Window Width", num_windows - 1, &window_width[0]);
+
+        // Event loop
+        // for (Long64_t iEvent = 0; iEvent < entries; ++iEvent)
+        // {
+        //     tuple->GetEntry(iEvent);
+
+        //     // Reset forward and backward multiplicities for each event
+        //     std::fill(fwdMult.begin(), fwdMult.end(), 0.0);
+        //     std::fill(bkwdMult.begin(), bkwdMult.end(), 0.0);
+            
+        //     int tree_size = tree -> GetEntries();
+
+	    //     // cout << tree_size << endl;            
+        //     // Particle loop
+        //     for (Int_t i = 0; i < entries; ++i)
+        //     {
+        //         tuple->GetEntry(i);
+
+        //         // Check the pT value
+        //         if (pT < pTMin || pT > pTMax)
+        //             continue;
+
+        //         hist->Fill(pT);
+        //         hist2->Fill(eta);
+
+        //         for (Int_t j = 0; j < num_windows - 1; ++j)
+        //         {
+        //             if (eta >= window_width[j] && eta < window_width[j + 1])
+        //             {
+        //                 fwdMult[j]++;
+        //                 break;        //             }        //         }
+
+        //         for (Int_t j = 0; j < num_windows - 1; ++j)
+        //         {
+        //             if (eta <= -window_width[j] && eta > -window_width[j + 1])
+        //             {
+        //                 bkwdMult[j]++;
+        //                 break;        //             }        //         }        //     }
+
+        //     double sum_nF_k = 0.0;
+        //     double sum_nB_k = 0.0;
+        //     double sum_nBnF_k = 0.0;
+        //     double nFSquared_sum_k = 0.0;
+
+        //     for (Int_t k = 0; k < num_windows - 1; ++k)
+        //     {
+        //         sum_nF_k += fwdMult[k];
+        //         nFSquared_sum_k += fwdMult[k] * fwdMult[k];
+
+        //         sum_nB_k = 0.0;
+        //         sum_nBnF_k = 0.0;
+
+        //         for (Int_t b = k + 1; b < num_windows - 1; ++b)
+        //         {
+        //             sum_nB_k += bkwdMult[b];
+        //             sum_nBnF_k += fwdMult[k] * bkwdMult[b];        //         }
+
+        //         Double_t b_corr = (sum_nBnF_k - sum_nF_k * sum_nB_k) / (nFSquared_sum_k - sum_nF_k * sum_nF_k);
+
+        //         if (std::isnan(b_corr) || std::isinf(b_corr))
+        //             continue;
+
+        //         b_corr_vs_width->Fill(window_width[k], b_corr);
+        //         profile_b_corr->Fill(window_width[k], b_corr);
+                //     }   // Forward-backward selection loop ends
+        // }   // Event loop ends
+      
+        // delete profile_b_corr;
+        // delete b_corr_vs_width;
+        delete tuple ;
+        if( j % 10000 == 0 ){ cout<<"event " <<j <<endl;}
+    } // Ntuple reading loop ends
+
+	file->Close();
+	delete file;
+        TFile *output = new TFile("output.root", "RECREATE");
+        hist->Write();
+        hist2->Write();
+        delete hist2;
+        delete hist;
+        // b_corr_vs_width->Write();
+        // profile_b_corr->Write();
+        output->Close();
+          delete output;
+} // Function ends
+

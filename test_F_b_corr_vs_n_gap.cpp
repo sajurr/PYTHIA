@@ -15,10 +15,32 @@ using namespace std;
 int main()
 {
     Pythia8::Pythia pythia;
-    pythia.readString("Beams:idA = 2212");
-    pythia.readString("Beams:idB = 2212");
-    pythia.readString("SoftQCD:all = on");
-    pythia.readString("Beams:eCM = 900");
+pythia.readString("SoftQCD:inelastic = on");
+pythia.readString("Tune:ee = 7");//monash tuning
+pythia.readString("Tune:pp = 14");//monash tuning
+pythia.readString("Random:setSeed = on");
+pythia.readString("Random:seed = 5738921");   //run time ran number
+pythia.readString("Beams:idA = 2212");
+pythia.readString("Beams:idB = 2212");   // pid for proton
+pythia.readString("Beams:eCM = 13000.0");   //Set the C.O.M energy in GeV here
+
+pythia.readString("PartonLevel:MPI = on");                                                                                         
+pythia.readString("MultiPartonInteractions:pT0Ref = 2.15");
+
+pythia.readString("ColourReconnection:reconnect = on");
+pythia.readString("ColourReconnection:mode = 1");
+pythia.readString("ColourReconnection:allowDoubleJunRem = off");                                                                   
+pythia.readString("ColourReconnection:m0= 0.3");                                                                                   
+pythia.readString("ColourReconnection:allowJunctions = on");                                                                       
+pythia.readString("ColourReconnection:junctionCorrection = 1.2");                                                                  
+pythia.readString("ColourReconnection:timeDilationMode = 2");                                                                      
+pythia.readString("ColourReconnection:timeDilationPar = 0.18");
+
+pythia.readString("Ropewalk:RopeHadronization = off"); 
+    //pythia.readString("Beams:idA = 2212");
+    //pythia.readString("Beams:idB = 2212");
+    //pythia.readString("SoftQCD:all = on");
+    // pythia.readString("Beams:eCM = 900");
     pythia.init();
 
     double pTMin = 0.3;
@@ -73,41 +95,8 @@ int main()
                     break;
                 }
             }
-        }    
-            // // Print the entries of bkwdMult vector
-            // for (int j = 0; j < bkwdMult.size(); ++j) {
-            //     cout << "bkwdMult[" << j << "] = " << bkwdMult[j] << endl;
-            // }
+        }   // Particle loop end
 
-            //     // Choosing forward multiplicity within different pseudorapidity windows
-            //     for (int j = 0; j < window_width.size() - 1; ++j)
-            //     {
-            //         if (abs(pythia.event[i].eta()) < window_width[j + 1])
-            //         {
-            //             fwdMult[j]++;
-            //             break;
-            //         }
-            //     }
-
-            //     // Choosing backward multiplicity within different pseudorapidity windows
-            //     for (int j = 0; j < window_width.size() - 1; ++j)
-            //     {
-            //         if (abs(pythia.event[i].eta()) > 2.8 - window_width[j + 1])
-            //         {
-            //             bkwdMult[j]++;
-            //             break;
-            //         }
-            //     }
-            // }
-            
-
-            //Print the entries of fwdMult vector
-            // for (int j = 0; j < fwdMult.size(); ++j) {
-            //     cout << "Event number "<<iEvents<<" fwd[" << j << "] = " << fwdMult[j] << endl;
-            // }
-            // for (int j = 0; j < bkwdMult.size(); ++j) {
-            //     cout << "Event number "<<iEvents<<" bkwd[" << j << "] = " << bkwdMult[j] << endl;
-            // }
 
             double sum_nF_k = 0.0;
             double sum_nB_k = 0.0;
@@ -115,19 +104,17 @@ int main()
             double nFSquared_sum_k = 0.0;
 
             // Calculate and store values for each window width
-            for (int k = 0; k < window_width.size() - 2; ++k) 
-            {
+            for (int k = 0; k < window_width.size() - 2; ++k) {
             sum_nF_k += fwdMult[k];
             nFSquared_sum_k += fwdMult[k] * fwdMult[k];
 
             sum_nB_k = 0.0;
             sum_nBnF_k = 0.0;
 
-                for (int b = k + 1; b < window_width.size() - 1; ++b) 
-                {
-                    sum_nB_k += bkwdMult[b];
-                    sum_nBnF_k += fwdMult[k] * bkwdMult[b];
-                }
+            for (int b = k + 1; b < window_width.size() - 1; ++b) {
+                sum_nB_k += bkwdMult[b];
+                sum_nBnF_k += fwdMult[k] * bkwdMult[b];
+            }
 
             double b_corr = (sum_nBnF_k - sum_nF_k * sum_nB_k) / (nFSquared_sum_k - sum_nF_k * sum_nF_k);
 
@@ -136,8 +123,10 @@ int main()
 
             b_corr_vs_width.Fill(window_width[k], b_corr);
             profile_b_corr.Fill(window_width[k], b_corr);
-            }
-    }
+        }
+
+    }   // Event loop end
+
     // Create a ROOT file and save the histograms
     TFile outFile("output.root", "RECREATE");
     hist.Write();

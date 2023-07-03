@@ -117,19 +117,18 @@ int main()
             // Calculate and store values for each window width
             for (int k = 0; k < window_width.size() - 2; ++k) 
             {
+            // Picking out the forward multiplicity particles
             sum_nF_k += fwdMult[k];
             nFSquared_sum_k += fwdMult[k] * fwdMult[k];
 
             sum_nB_k = 0.0;
             sum_nBnF_k = 0.0;
 
-                for (int b = k + 1; b < window_width.size() - 1; ++b) 
-                {
-                    sum_nB_k += bkwdMult[b];
-                    sum_nBnF_k += fwdMult[k] * bkwdMult[b];
-                }
+            // Picking out the backward multiplicity particles
+            sum_nB_k += bkwdMult[k];
+            sum_nBnF_k += fwdMult[k] * bkwdMult[k];
 
-            double b_corr = (sum_nBnF_k - sum_nF_k * sum_nB_k) / (nFSquared_sum_k - sum_nF_k * sum_nF_k);
+            double b_corr = (sum_nBnF_k / 10000 - (sum_nF_k * sum_nB_k) / 10000) / (nFSquared_sum_k / 10000 - (sum_nF_k * sum_nF_k) / 10000);
 
             if (std::isnan(b_corr) || std::isinf(b_corr))
                 continue;
